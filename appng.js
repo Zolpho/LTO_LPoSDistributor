@@ -25,19 +25,25 @@
 
 
 // START - Put your settings here
-const myleasewallet = 'your address';	//Put here the address of the wallet that your node uses
+const myleasewallet = 'your address';	        //Put here the address of the wallet that your node uses
 const myquerynode = "http://localhost:6869";	//The node and API port that you use (defaults to localhost)
-const feedistributionpercentage = 95;		//How many % do you want to share with your leasers (defaults to 90%)
-const blockwindowsize = 5000; 			//how many blockss to proces for every paymentcycle
+const feedistributionpercentage = 95;		    //How many % do you want to share with your leasers (defaults to 90%)
+const specialfeedistributionpercentage = 97;	//How many % do you want to share with specific addresses? (set in: specialfeearray)
+const blockwindowsize = 5000; 			        //how many blocks to proces for every paymentcycle
 
 // Put here wallet addresses that will receive no fees
 // var nofeearray = [ "3P6CwqcnK1wyW5TLzD15n79KbAsqAjQWXYZ",       //index0
 //                    "3P9AodxBATXqFC3jtUydXv9YJ8ExAD2WXYZ" ];
 var nofeearray = [ ]; 
+
+// Put here wallet addresses that will be handled with special fees
+// var specialfeearray = [
+//     "3Jqib5pvD9iERGqNN6J7AyfM84sXkB56MvG",
+//     "3P6CwqcnK1wyW5TLzD15n79KbAsqAjQWXYZ"
+// ];
+var specialfeearray = [ ];
+
 // END - your settings
-
-
-
 var request = require('sync-request');
 var fs = require('fs');
 
@@ -92,7 +98,8 @@ var config = {
     paymentid: payid,
     node: myquerynode,
     feeAmount: 100000000,
-    percentageOfFeesToDistribute: feedistributionpercentage
+    percentageOfFeesToDistribute: feedistributionpercentage,
+    specialpercentageOfFeesToDistribute: specialfeedistributionpercentage
 };
 
 var myLeases = {};
@@ -100,7 +107,6 @@ var myCanceledLeases = {};
 
 var currentStartBlock = startscanblock;
 
-var fs=require('fs');
 var prevleaseinfofile = config.startBlockHeight + "_" + config.address + ".json";
 if (fs.existsSync(prevleaseinfofile))
 {
@@ -313,14 +319,28 @@ var distribute = function(activeLeases, amountTotalLeased, block) {
 
         var amount = fee * share;
 
-       	if (address in payments) {
-       		payments[address] += amount * (config.percentageOfFeesToDistribute / 100);
+    if (address in payments) {
+        if (specialfeearray.indexOf(address) != -1 ){
+            payments[address] += amount * (config.specialpercentageOfFeesToDistribute / 100);
+        }else {
+            payments[address] += amount * (config.percentageOfFeesToDistribute / 100);
+        }
 	} else {
-		payments[address] = amount * (config.percentageOfFeesToDistribute / 100);
+		if (specialfeearray.indexOf(address) != -1 ){
+            payments[address] = amount * (config.specialpercentageOfFeesToDistribute / 100);
+        }else {
+            payments[address] = amount * (config.percentageOfFeesToDistribute / 100);
+        }
 	}
 
 	if ( payout == true ) {
-        	console.log(address + ' will receive ' + amount + ' of(' + fee + ') share: ' + share);
+        let specialfee = ''
+        if (specialfeearray.indexOf(address) != -1 ){
+            specialfee = ' ('+config.specialpercentageOfFeesToDistribute+')'
+        }else {
+            specialfee = ' ('+config.percentageOfFeesToDistribute+')'
+        }
+        	console.log(address + ' will receive ' + amount + ' of (' + fee + ') share: ' + share + ' ' + specialfee);
 	} else if ( payout == false ) {
 		console.log(address + ' marked as NOPAYOUT, will not receive fee share.');
 	}

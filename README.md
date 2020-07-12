@@ -61,11 +61,16 @@ The size of the next batch (paystart / paystop blocks), is used from the\
 const myleasewallet = '<your node wallet>';		<== Put here the address of the wallet that your node uses
 const myquerynode = "http://localhost:6869";		<== The node and API port that you use (defaults to localhost)
 const feedistributionpercentage = 90;			<== How many % do you want to share with your leasers (defaults to 90%)
+const specialfeedistributionpercentage = 95;    <== How many % do you want to share with specific addresses?
 const blockwindowsize = 10000;				<== How many blocks to process for every subsequent paymentcycle.
 
 var nofeearray = [ ];					<== Put here wallet addresses that you want to exclude from payments,
-							    Default empty, so everyone get's payouts
+							    Default empty, so everyone get\'s payouts
+
+var specialfeearray = [ ];					<== Put here wallet addresses that you want to process with special fees
 ```
+
+
 5. EDIT file checkPaymentsFile.js with vim or nano;
 ```sh
 var config = {
