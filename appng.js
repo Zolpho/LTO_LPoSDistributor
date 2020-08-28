@@ -206,18 +206,28 @@ var prepareDataStructure = function(blocks) {
                 transaction.block = block.height;
                 myCanceledLeases[transaction.leaseId] = transaction;
             }
-
-            if(myblock)
+            if(myblock && block.height < 870000)
             {
                 // considering lto fees
                 if(transaction.fee < 150000000000) // if tx lto fee is more dan 150 lto, filter it. probably a mistake by someone
                 {
-                    //ltoFees += (transaction.fee*0.4);
                     blockltofees += transaction.fee;
                 } else {
                     console.log("Filter TX at block: " + block.height + " Amount: " +  transaction.fee)
                 }
             }
+            else if(myblock)
+            {
+                // considering lto fees
+                if(transaction.fee < 150000000000) // if tx lto fee is more dan 150 lto, filter it. probably a mistake by someone
+                {
+                    blockltofees += transaction.fee - 10000000;
+                } else {
+                    console.log("Filter TX at block: " + block.height + " Amount: " +  transaction.fee)
+                }
+            }
+
+
       });
       ltoFees += Math.round(parseInt(blockltofees / 5) * 2);
 
@@ -232,13 +242,24 @@ var prepareDataStructure = function(blocks) {
             prevblock.transactions.forEach(function(transaction)
             {
                 // considering lto fees
-                if(transaction.fee < 150000000000) // if tx lto fee is more dan 150 lto, filter it. probably a mistake by someone
-              	{
-                  	//ltoFees += (transaction.fee*0.6);
+                if(prevblock.height < 870000)
+                {
+		    if(transaction.fee < 150000000000) // if tx lto fee is more dan 150 lto, filter it. probably a mistake by someone
+               	    {
                   	blockltofees += transaction.fee;
-                } else {
-  			        console.log("Filter TX at block: " + block.height + " Amount: " +  transaction.fee)
-  		        }
+                    } else {
+  			console.log("Filter TX at block: " + block.height + " Amount: " +  transaction.fee)
+  		    }
+		}
+		else
+		{
+                    if(transaction.fee < 150000000000) // if tx lto fee is more dan 150 lto, filter it. probably a mistake by someone
+                    {
+                        blockltofees += transaction.fee - 10000000;
+                    } else {
+                        console.log("Filter TX at block: " + block.height + " Amount: " +  transaction.fee)
+                    }
+		}
             });
         }
 
