@@ -218,9 +218,10 @@ var doPayment = function(payments, counter, batchid, nrofmasstransfers) {
  				if ( asset !== 'lto' ) { var assetId = payment["Common"][asset + "assetId"] }
 
 				var masstransactionpayment = {
- 								"version": masstransferversion,
-								"type": masstransfertype,
-								"sender": payment.Common.sender
+ 					"version": masstransferversion,
+					"type": masstransfertype,
+					"sender": payment.Common.sender,
+					"timestamp": Date.now()
 				}
 
 				if ( asset !== 'lto' ) { masstransactionpayment.assetId = assetId } //Add assetId to json if asset is NOT lto
