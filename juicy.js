@@ -25,11 +25,11 @@
 
 
 // START - Put your settings here
-const myleasewallet = '3MpL7qLzS8UZH4cNcZsvJUWouiXJ6ZQdRCV';	        //Put here the address of the wallet that your node uses
-const myquerynode = "http://testnet.lto.network";	//The node and API port that you use (defaults to localhost)
+const myleasewallet = 'your address';	        //Put here the address of the wallet that your node uses
+const myquerynode = "http://localhost:6869";	//The node and API port that you use (defaults to localhost)
 const feedistributionpercentage = 95;		    //How many % do you want to share with your leasers (defaults to 90%)
 const specialfeedistributionpercentage = 97;	//How many % do you want to share with specific addresses? (set in: specialfeearray)
-const blockwindowsize = 1000; 			        //how many blocks to proces for every paymentcycle
+const blockwindowsize = 5000; 			        //how many blocks to proces for every paymentcycle
 
 // Put here wallet addresses that will receive no fees
 // var nofeearray = [ "3P6CwqcnK1wyW5TLzD15n79KbAsqAjQWXYZ",       //index0
