@@ -29,7 +29,7 @@ const myleasewallet = 'your address';	        //Put here the address of the wall
 const myquerynode = "http://localhost:6869";	//The node and API port that you use (defaults to localhost)
 const feedistributionpercentage = 95;		    //How many % do you want to share with your leasers (defaults to 90%)
 const specialfeedistributionpercentage = 97;	//How many % do you want to share with specific addresses? (set in: specialfeearray)
-const blockwindowsize = 5000; 			        //how many blocks to proces for every paymentcycle
+const blockwindowsize = 250; 			        //how many blocks to proces for every paymentcycle
 
 // Put here wallet addresses that will receive no fees
 // var nofeearray = [ "3P6CwqcnK1wyW5TLzD15n79KbAsqAjQWXYZ",       //index0
@@ -51,6 +51,18 @@ var fs = require('fs');
 var batchinfofile = "batchinfo.json";
 var payqueuefile    = "payqueue.dat";
 
+function nodeVersionCheck (oldVer, newVer) {
+    const oldParts = oldVer.split('.')
+    const newParts = newVer.split('.')
+    for (var i = 0; i < newParts.length; i++) {
+      const a = ~~newParts[i]
+      const b = ~~oldParts[i]
+      if (a < b) return true
+      if (a > b) return false
+    }
+    return false
+  }
+
 if (fs.existsSync(batchinfofile)) {
 
    var rawbatchinfo = fs.readFileSync(batchinfofile);
@@ -71,12 +83,27 @@ if (fs.existsSync(batchinfofile)) {
 	json: true
 	}
    };
+    let optionsVersion = {
+	uri: "/node/version",
+	baseUrl: myquerynode,
+	method: "GET",
+	headers: {
+	json: true
+	}
+   };
    
    let blockchainresponse = request(options.method, options.baseUrl + options.uri, options.headers)
-   let lastblockheight = parseInt(JSON.parse(blockchainresponse.body).height) 
-   
-   if (paymentstopblock > lastblockheight) {
-	let blocksleft = paymentstopblock - lastblockheight
+   let lastblockheight = parseInt(JSON.parse(blockchainresponse.body).height)
+   let getnodeversion = request(optionsVersion.method, optionsVersion.baseUrl + optionsVersion.uri, optionsVersion.headers)
+   let nodeversion = JSON.parse(getnodeversion.body).version.replace("LTO v", "")
+
+
+    
+    if(nodeVersionCheck(nodeversion, "1.6.3") === false){
+        console.log("\n Current node version is " + nodeversion + ". This script works on nodes running 1.6.4 or higher.")
+        return;
+    }else if (paymentstopblock > lastblockheight) {
+	    let blocksleft = paymentstopblock - lastblockheight
         console.log("\n Current blockheight is " + lastblockheight + ". Waiting to reach " + paymentstopblock + " for next payment round.")
         console.log(" This is approximaly in ~" + Math.round((blocksleft)/60) + " hrs (" + (Math.round((blocksleft/60/24)*100))/100 + " days).\n")
         return;
