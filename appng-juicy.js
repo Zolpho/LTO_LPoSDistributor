@@ -25,25 +25,19 @@
 
 
 // START - Put your settings here
-const myleasewallet = 'your address';	        //Put here the address of the wallet that your node uses
+const myleasewallet = 'your address';	//Put here the address of the wallet that your node uses
 const myquerynode = "http://localhost:6869";	//The node and API port that you use (defaults to localhost)
-const feedistributionpercentage = 95;		    //How many % do you want to share with your leasers (defaults to 90%)
-const specialfeedistributionpercentage = 97;	//How many % do you want to share with specific addresses? (set in: specialfeearray)
-const blockwindowsize = 5000; 			        //how many blocks to proces for every paymentcycle
+const feedistributionpercentage = 95;		//How many % do you want to share with your leasers (defaults to 90%)
+const blockwindowsize = 5000; 			//how many blockss to proces for every paymentcycle
 
 // Put here wallet addresses that will receive no fees
 // var nofeearray = [ "3P6CwqcnK1wyW5TLzD15n79KbAsqAjQWXYZ",       //index0
 //                    "3P9AodxBATXqFC3jtUydXv9YJ8ExAD2WXYZ" ];
 var nofeearray = [ ]; 
-
-// Put here wallet addresses that will be handled with special fees
-// var specialfeearray = [
-//     "3Jqib5pvD9iERGqNN6J7AyfM84sXkB56MvG",
-//     "3P6CwqcnK1wyW5TLzD15n79KbAsqAjQWXYZ"
-// ];
-var specialfeearray = [ ];
-
 // END - your settings
+
+
+
 var request = require('sync-request');
 var fs = require('fs');
 
@@ -86,8 +80,7 @@ if (fs.existsSync(batchinfofile)) {
 	}
    };
 
-   // Get node version
-    let optionsVersion = {
+   let optionsVersion = {
 	uri: "/node/version",
 	baseUrl: myquerynode,
 	method: "GET",
@@ -95,23 +88,23 @@ if (fs.existsSync(batchinfofile)) {
 	json: true
 	}
    };
-   
+
    let blockchainresponse = request(options.method, options.baseUrl + options.uri, options.headers)
-   let lastblockheight = parseInt(JSON.parse(blockchainresponse.body).height)
+   let lastblockheight = parseInt(JSON.parse(blockchainresponse.body).height) 
    let getnodeversion = request(optionsVersion.method, optionsVersion.baseUrl + optionsVersion.uri, optionsVersion.headers)
    let nodeversion = JSON.parse(getnodeversion.body).version.replace("LTO v", "")
 
-    if(nodeVersionCheck(nodeversion, "1.6.3") === false){
+   if(nodeVersionCheck(nodeversion, "1.6.3") === false){
         console.log("\n Current node version is " + nodeversion + ". This script works on nodes running 1.6.4 or higher.")
         process.exit()
     }else if (paymentstopblock > lastblockheight) {
-	    let blocksleft = paymentstopblock - lastblockheight
+        let blocksleft = paymentstopblock - lastblockheight
         console.log("\n Current blockheight is " + lastblockheight + ". Waiting to reach " + paymentstopblock + " for next payment round.")
         console.log(" This is approximaly in ~" + Math.round((blocksleft)/60) + " hrs (" + (Math.round((blocksleft/60/24)*100))/100 + " days).\n")
         process.exit()
-   } else { var backupbatchinfo = fs.writeFileSync(batchinfofile + ".bak",fs.readFileSync(batchinfofile)) }  //Create backup of batchdatafile
+    } else { var backupbatchinfo = fs.writeFileSync(batchinfofile + ".bak",fs.readFileSync(batchinfofile)) }  //Create backup of batchdatafile
 
-} 
+}
 else {
      console.log("\nError, batchfile",batchinfofile,"missing. Will stop now.\n");
      process.exit() //if the batchinfofile doesn't exist stop further processing
@@ -126,7 +119,6 @@ var config = {
     node: myquerynode,
     feeAmount: 100000000,
     percentageOfFeesToDistribute: feedistributionpercentage,
-    specialpercentageOfFeesToDistribute: specialfeedistributionpercentage,
     juicyActivationBlock: 1800000
 };
 
@@ -212,17 +204,18 @@ var start = function() {
 var prepareDataStructure = function(blocks) {
 
     blocks.forEach(function(block,index) {
-        var myblock = false;
-            var ltoFees = 0;
+	var myblock = false;
+        var ltoFees = 0;
 
-            if (block.generator === config.address)
-            {
-                myForgedBlocks.push(block);
-                myblock = true;
-            }
-        var blockltofees=0;
+        if (block.generator === config.address)
+        {
+            myForgedBlocks.push(block);
+            myblock = true;
+        }
+	var blockltofees=0;
 
-        block.transactions.forEach(function(transaction) {
+        block.transactions.forEach(function(transaction)
+        {
             // type 8 are leasing tx
             if (transaction.type === 8 && transaction.recipient === config.address){
                 transaction.block = block.height;
@@ -233,17 +226,12 @@ var prepareDataStructure = function(blocks) {
             }
         });
 
-        if(myblock && block.height > config.juicyActivationBlock) {
-            blockltofees = block.generatorReward;
-            blockfee = block.fee;
-            blockburned = block.burnedFees;
-            blockminingReward = block.miningReward;
-        }
-
-        //console.log(`Block ${block.height}: ${ltoFees} | ${blockltofees}`)
-        // if(blockltofees > 0){
-        //     fs.writeFile('./output.txt', `${block.height}; ${blockltofees}; ${blockfee}; ${blockburned}; ${blockminingReward} \n`, { flag: 'a+' }, err => {});
-        // }
+            if(myblock && block.height > config.juicyActivationBlock) {
+                blockltofees = block.generatorReward;
+                blockfee = block.fee;
+                blockburned = block.burnedFees;
+                blockminingReward = block.miningReward;
+            }
 
         block.ltoFees = blockltofees;
         blockltofees=0;
@@ -318,28 +306,14 @@ var distribute = function(activeLeases, amountTotalLeased, block) {
 
         var amount = fee * share;
 
-    if (address in payments) {
-        if (specialfeearray.indexOf(address) != -1 ){
-            payments[address] += amount * (config.specialpercentageOfFeesToDistribute / 100);
-        }else {
-            payments[address] += amount * (config.percentageOfFeesToDistribute / 100);
-        }
+       	if (address in payments) {
+       		payments[address] += amount * (config.percentageOfFeesToDistribute / 100);
 	} else {
-		if (specialfeearray.indexOf(address) != -1 ){
-            payments[address] = amount * (config.specialpercentageOfFeesToDistribute / 100);
-        }else {
-            payments[address] = amount * (config.percentageOfFeesToDistribute / 100);
-        }
+		payments[address] = amount * (config.percentageOfFeesToDistribute / 100);
 	}
 
 	if ( payout == true ) {
-        let specialfee = ''
-        if (specialfeearray.indexOf(address) != -1 ){
-            specialfee = ' ('+config.specialpercentageOfFeesToDistribute+')'
-        }else {
-            specialfee = ' ('+config.percentageOfFeesToDistribute+')'
-        }
-        	console.log(address + ' will receive ' + amount + ' of (' + fee + ') share: ' + share + ' ' + specialfee);
+        	console.log(address + ' will receive ' + amount + ' of(' + fee + ') share: ' + share);
 	} else if ( payout == false ) {
 		console.log(address + ' marked as NOPAYOUT, will not receive fee share.');
 	}
