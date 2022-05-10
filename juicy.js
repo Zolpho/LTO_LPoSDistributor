@@ -127,7 +127,7 @@ var config = {
     feeAmount: 100000000,
     percentageOfFeesToDistribute: feedistributionpercentage,
     specialpercentageOfFeesToDistribute: specialfeedistributionpercentage,
-    juicyActivationBlock: 1800000
+    juicyActivationBlock: 1900000
 };
 
 var myLeases = {};
