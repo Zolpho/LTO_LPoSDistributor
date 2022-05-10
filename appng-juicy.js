@@ -119,7 +119,7 @@ var config = {
     node: myquerynode,
     feeAmount: 100000000,
     percentageOfFeesToDistribute: feedistributionpercentage,
-    juicyActivationBlock: 1900000
+    juicyActivationBlock: 1790000
 };
 
 var myLeases = {};
