@@ -126,8 +126,7 @@ var config = {
     node: myquerynode,
     feeAmount: 100000000,
     percentageOfFeesToDistribute: feedistributionpercentage,
-    specialpercentageOfFeesToDistribute: specialfeedistributionpercentage,
-    juicyActivationBlock: 1790000
+    specialpercentageOfFeesToDistribute: specialfeedistributionpercentage
 };
 
 var myLeases = {};
@@ -233,7 +232,7 @@ var prepareDataStructure = function(blocks) {
             }
         });
 
-        if(myblock && block.height > config.juicyActivationBlock) {
+        if(myblock) {
             blockltofees = block.generatorReward;
             blockfee = block.fee;
             blockburned = block.burnedFees;
