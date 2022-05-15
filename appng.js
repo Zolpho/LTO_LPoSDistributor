@@ -25,31 +25,39 @@
 
 
 // START - Put your settings here
-const myleasewallet = 'your address';	        //Put here the address of the wallet that your node uses
+const myleasewallet = 'your address';	//Put here the address of the wallet that your node uses
 const myquerynode = "http://localhost:6869";	//The node and API port that you use (defaults to localhost)
-const feedistributionpercentage = 95;		    //How many % do you want to share with your leasers (defaults to 90%)
-const specialfeedistributionpercentage = 97;	//How many % do you want to share with specific addresses? (set in: specialfeearray)
-const blockwindowsize = 5000; 			        //how many blocks to proces for every paymentcycle
+const feedistributionpercentage = 95;		//How many % do you want to share with your leasers (defaults to 90%)
+const blockwindowsize = 5000; 			//how many blockss to proces for every paymentcycle
 
 // Put here wallet addresses that will receive no fees
 // var nofeearray = [ "3P6CwqcnK1wyW5TLzD15n79KbAsqAjQWXYZ",       //index0
 //                    "3P9AodxBATXqFC3jtUydXv9YJ8ExAD2WXYZ" ];
 var nofeearray = [ ]; 
-
-// Put here wallet addresses that will be handled with special fees
-// var specialfeearray = [
-//     "3Jqib5pvD9iERGqNN6J7AyfM84sXkB56MvG",
-//     "3P6CwqcnK1wyW5TLzD15n79KbAsqAjQWXYZ"
-// ];
-var specialfeearray = [ ];
-
 // END - your settings
+
+
+
 var request = require('sync-request');
 var fs = require('fs');
 
 // file with the batch data to start collecting. Will be updated after succesfull appng run
 var batchinfofile = "batchinfo.json";
 var payqueuefile    = "payqueue.dat";
+
+function nodeVersionCheck (oldVer, newVer) {
+    const oldParts = oldVer.split('.')
+    const newParts = newVer.split('.')
+    for (var i = 0; i < newParts.length; i++) {
+      const a = ~~newParts[i]
+      const b = ~~oldParts[i]
+      if (oldVer === "1.6.3-10-g899de90") return true // nightly build
+      if (oldVer === "1.6.3-12-g1589928") return true // nightly build
+      if (a < b) return true
+      if (a > b) return false
+    }
+    return false
+  }
 
 if (fs.existsSync(batchinfofile)) {
 
@@ -71,23 +79,35 @@ if (fs.existsSync(batchinfofile)) {
 	json: true
 	}
    };
-   
+
+   let optionsVersion = {
+	uri: "/node/version",
+	baseUrl: myquerynode,
+	method: "GET",
+	headers: {
+	json: true
+	}
+   };
+
    let blockchainresponse = request(options.method, options.baseUrl + options.uri, options.headers)
    let lastblockheight = parseInt(JSON.parse(blockchainresponse.body).height) 
-   
-   if (paymentstopblock > lastblockheight) {
-	let blocksleft = paymentstopblock - lastblockheight
+   let getnodeversion = request(optionsVersion.method, optionsVersion.baseUrl + optionsVersion.uri, optionsVersion.headers)
+   let nodeversion = JSON.parse(getnodeversion.body).version.replace("LTO v", "")
+
+   if(nodeVersionCheck(nodeversion, "1.6.3") === false){
+        console.log("\n Current node version is " + nodeversion + ". This script works on nodes running 1.6.4 or higher.")
+        process.exit()
+    }else if (paymentstopblock > lastblockheight) {
+        let blocksleft = paymentstopblock - lastblockheight
         console.log("\n Current blockheight is " + lastblockheight + ". Waiting to reach " + paymentstopblock + " for next payment round.")
         console.log(" This is approximaly in ~" + Math.round((blocksleft)/60) + " hrs (" + (Math.round((blocksleft/60/24)*100))/100 + " days).\n")
-        return;
-   } else { var backupbatchinfo = fs.writeFileSync(batchinfofile + ".bak",fs.readFileSync(batchinfofile)) }  //Create backup of batchdatafile
+        process.exit()
+    } else { var backupbatchinfo = fs.writeFileSync(batchinfofile + ".bak",fs.readFileSync(batchinfofile)) }  //Create backup of batchdatafile
 
-} 
+}
 else {
-     console.log();
-     console.log("Error, batchfile",batchinfofile,"missing. Will stop now.");
-     console.log();
-     return; //if the batchinfofile doesn't exist stop further processing
+     console.log("\nError, batchfile",batchinfofile,"missing. Will stop now.\n");
+     process.exit() //if the batchinfofile doesn't exist stop further processing
 }
 
 var config = {
@@ -98,8 +118,7 @@ var config = {
     paymentid: payid,
     node: myquerynode,
     feeAmount: 100000000,
-    percentageOfFeesToDistribute: feedistributionpercentage,
-    specialpercentageOfFeesToDistribute: specialfeedistributionpercentage
+    percentageOfFeesToDistribute: feedistributionpercentage
 };
 
 var myLeases = {};
@@ -184,14 +203,12 @@ var start = function() {
 var prepareDataStructure = function(blocks) {
 
     blocks.forEach(function(block,index) {
-    var checkprevblock = false;
 	var myblock = false;
         var ltoFees = 0;
 
         if (block.generator === config.address)
         {
             myForgedBlocks.push(block);
-            checkprevblock = true;
             myblock = true;
         }
 	var blockltofees=0;
@@ -206,69 +223,17 @@ var prepareDataStructure = function(blocks) {
                 transaction.block = block.height;
                 myCanceledLeases[transaction.leaseId] = transaction;
             }
-            if(myblock && block.height < 870000)
-            {
-                // considering lto fees
-                if(transaction.fee < 150000000000) // if tx lto fee is more dan 150 lto, filter it. probably a mistake by someone
-                {
-                    blockltofees += transaction.fee;
-                } else {
-                    console.log("Filter TX at block: " + block.height + " Amount: " +  transaction.fee)
-                }
-            }
-            else if(myblock)
-            {
-                // considering lto fees
-                if(transaction.fee < 150000000000) // if tx lto fee is more dan 150 lto, filter it. probably a mistake by someone
-                {
-                    blockltofees += transaction.fee - 10000000;
-                } else {
-                    console.log("Filter TX at block: " + block.height + " Amount: " +  transaction.fee)
-                }
+        });
+
+            if(myblock) {
+                blockltofees = block.generatorReward;
+                blockfee = block.fee;
+                blockburned = block.burnedFees;
+                blockminingReward = block.miningReward;
             }
 
-
-      });
-      ltoFees += Math.round(parseInt(blockltofees / 5) * 2);
-
-      blockltofees=0;
-
-      if(checkprevblock)
-      {
-        if (index > 0)
-        {
-            //console.log("Next: " + blocks[index + 1]);
-            var prevblock = blocks[index - 1];
-            prevblock.transactions.forEach(function(transaction)
-            {
-                // considering lto fees
-                if(prevblock.height < 870000)
-                {
-		    if(transaction.fee < 150000000000) // if tx lto fee is more dan 150 lto, filter it. probably a mistake by someone
-               	    {
-                  	blockltofees += transaction.fee;
-                    } else {
-  			console.log("Filter TX at block: " + block.height + " Amount: " +  transaction.fee)
-  		    }
-		}
-		else
-		{
-                    if(transaction.fee < 150000000000) // if tx lto fee is more dan 150 lto, filter it. probably a mistake by someone
-                    {
-                        blockltofees += transaction.fee - 10000000;
-                    } else {
-                        console.log("Filter TX at block: " + block.height + " Amount: " +  transaction.fee)
-                    }
-		}
-            });
-        }
-
-      ltoFees += (blockltofees - Math.round(parseInt(blockltofees / 5) * 2));
-
-      }
-
-        block.ltoFees = ltoFees;
-
+        block.ltoFees = blockltofees;
+        blockltofees=0;
     });
 };
 
@@ -340,28 +305,14 @@ var distribute = function(activeLeases, amountTotalLeased, block) {
 
         var amount = fee * share;
 
-    if (address in payments) {
-        if (specialfeearray.indexOf(address) != -1 ){
-            payments[address] += amount * (config.specialpercentageOfFeesToDistribute / 100);
-        }else {
-            payments[address] += amount * (config.percentageOfFeesToDistribute / 100);
-        }
+       	if (address in payments) {
+       		payments[address] += amount * (config.percentageOfFeesToDistribute / 100);
 	} else {
-		if (specialfeearray.indexOf(address) != -1 ){
-            payments[address] = amount * (config.specialpercentageOfFeesToDistribute / 100);
-        }else {
-            payments[address] = amount * (config.percentageOfFeesToDistribute / 100);
-        }
+		payments[address] = amount * (config.percentageOfFeesToDistribute / 100);
 	}
 
 	if ( payout == true ) {
-        let specialfee = ''
-        if (specialfeearray.indexOf(address) != -1 ){
-            specialfee = ' ('+config.specialpercentageOfFeesToDistribute+')'
-        }else {
-            specialfee = ' ('+config.percentageOfFeesToDistribute+')'
-        }
-        	console.log(address + ' will receive ' + amount + ' of (' + fee + ') share: ' + share + ' ' + specialfee);
+        	console.log(address + ' will receive ' + amount + ' of(' + fee + ') share: ' + share);
 	} else if ( payout == false ) {
 		console.log(address + ' marked as NOPAYOUT, will not receive fee share.');
 	}
