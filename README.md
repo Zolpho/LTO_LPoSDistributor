@@ -18,7 +18,7 @@ This version is succesfully tested with versions;
  - node v10.12.0 (allthough lower should work probably)
  - npm 6.4.1 (allthough lower should work probably)
  - tested on Ubuntu 14.0 with kernel 4.4.0-116-generic (allthough of minor importance)
- - get the latest version from github: git clone https://github.com/jayjaynl/LTO_LPoSDistributor.git
+ - get the latest version from github: git clone https://github.com/justmvg/LTO_LPoSDistributor.git
 
 To install node.js and npm, do following steps;
  - add repository: curl -sL https://deb.nodesource.com/setup_10.x | sudo bash -
